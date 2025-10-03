@@ -2,20 +2,26 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Поскольку build context теперь "..", берем package.json именно из mtr-backend
+# Установим OS-пакеты для сборки и OpenSSL (если понадобятся)
+RUN apk add --no-cache python3 make g++ openssl
+
+# Копируем пакеты и ставим зависимости
 COPY mtr-backend/package*.json ./
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 
-# Копируем исходники бэка
-COPY mtr-backend ./
+# Копируем исходники и pm2 конфиг
+COPY mtr-backend/ ./
 
-# Сборка NestJS
-RUN npm run build
+# Билдим backend (если требуется)
+RUN npm run build || true
 
-ENV NODE_ENV=production
+# Папка для сертификатов (будем монтировать)
+RUN mkdir -p /app/certs
+
+# PM2 для прод
+RUN npm i -g pm2
+
 EXPOSE 3001
 
-# Если есть "start:prod" — используем его
-CMD ["npm", "run", "start:prod"]
-# иначе можно так:
-# CMD ["node", "dist/main.js"]
+# Запуск через PM2 runtime, чтобы использовать ecosystem.config.js
+CMD ["pm2-runtime", "start", "ecosystem.config.js", "--only", "backend"]
