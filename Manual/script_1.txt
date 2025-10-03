@@ -1,0 +1,203 @@
+-- ============================================
+--  dimension_category ("key","nameRu","nameEn", id)
+--  dimansion ("nameDimension","code","category","isBase","toBaseFactor", id)
+--  dimension_alias (text,"dimensionId", id)
+-- ============================================
+
+-- 1) Категории (апсерт по "key")
+INSERT INTO dimension_category ("key","nameRu","nameEn") VALUES
+  ('count',  'Количество', 'Count'),
+  ('mass',   'Масса',      'Mass'),
+  ('length', 'Длина',      'Length'),
+  ('area',   'Площадь',    'Area'),
+  ('volume', 'Объем',      'Volume'),
+  ('time',   'Время',      'Time')
+ON CONFLICT ("key")
+DO UPDATE SET
+  "nameRu" = EXCLUDED."nameRu",
+  "nameEn" = EXCLUDED."nameEn";
+
+-- 2) Хелперы для upsert
+
+-- 2.1 Найти dimansion.id по коду
+CREATE OR REPLACE FUNCTION _dim_get_id(p_code text)
+RETURNS integer AS $$
+DECLARE v_id integer;
+BEGIN
+  SELECT id INTO v_id FROM dimansion WHERE "code" = p_code LIMIT 1;
+  RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2.2 Upsert единицы (единственная базовая в категории; числовой toBaseFactor)
+CREATE OR REPLACE FUNCTION _dim_upsert(
+  p_name text, p_code text, p_category text, p_is_base boolean, p_factor numeric
+) RETURNS integer AS $$
+DECLARE
+  v_id integer;
+BEGIN
+  v_id := _dim_get_id(p_code);
+
+  IF v_id IS NULL THEN
+    INSERT INTO dimansion ("nameDimension","code","category","isBase","toBaseFactor")
+    VALUES (
+      p_name,
+      p_code,
+      p_category,
+      COALESCE(p_is_base,false),
+      CASE WHEN COALESCE(p_is_base,false) THEN 1 ELSE p_factor END
+    )
+    RETURNING id INTO v_id;
+  ELSE
+    UPDATE dimansion
+       SET "nameDimension" = p_name,
+           "category"      = p_category,
+           "isBase"        = COALESCE(p_is_base,false),
+           "toBaseFactor"  = CASE WHEN COALESCE(p_is_base,false) THEN 1 ELSE p_factor END
+     WHERE id = v_id;
+  END IF;
+
+  -- если отметили базовой — снимаем флаг у остальных в категории
+  IF p_is_base AND p_category IS NOT NULL THEN
+    UPDATE dimansion
+       SET "isBase" = FALSE, "toBaseFactor" = 1
+     WHERE "category" = p_category AND id <> v_id;
+  END IF;
+
+  RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2.3 Добавить алиасы без дублей
+CREATE OR REPLACE FUNCTION _dim_add_aliases(p_dim_id integer, p_aliases text[])
+RETURNS void AS $$
+DECLARE
+  a text;
+  exists_id integer;
+BEGIN
+  IF p_dim_id IS NULL THEN RETURN; END IF;
+  FOREACH a IN ARRAY p_aliases LOOP
+    IF a IS NULL OR length(trim(a))=0 THEN CONTINUE; END IF;
+    SELECT id INTO exists_id
+      FROM dimension_alias
+      WHERE "dimensionId" = p_dim_id AND text = a
+      LIMIT 1;
+    IF exists_id IS NULL THEN
+      INSERT INTO dimension_alias(text, "dimensionId") VALUES (a, p_dim_id);
+    END IF;
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 3) ДАННЫЕ
+
+-- COUNT (базовая pcs)
+DO $$
+DECLARE v integer;
+BEGIN
+  v := _dim_upsert('Штука', 'pcs', 'count', TRUE, 1);
+  PERFORM _dim_add_aliases(v, ARRAY['шт','штука','pc','piece','ед','unit','шт.','pcs.']);
+END $$;
+
+-- MASS (базовая kg)
+DO $$
+DECLARE vkg integer; vg integer; vt integer; vmg integer;
+BEGIN
+  vkg := _dim_upsert('Килограмм', 'kg', 'mass', TRUE, 1);
+  PERFORM _dim_add_aliases(vkg, ARRAY['кг','килограмм','kilo','килограмм(ы)','kg.']);
+
+  vg  := _dim_upsert('Грамм', 'g', 'mass', FALSE, 0.001);
+  PERFORM _dim_add_aliases(vg, ARRAY['г','гр','грамм','gram','g.']);
+
+  vt  := _dim_upsert('Тонна', 't', 'mass', FALSE, 1000);
+  PERFORM _dim_add_aliases(vt, ARRAY['т','тонна','ton','t.']);
+
+  vmg := _dim_upsert('Миллиграмм', 'mg', 'mass', FALSE, 0.000001);
+  PERFORM _dim_add_aliases(vmg, ARRAY['мг','milligram','mg.']);
+END $$;
+
+-- LENGTH (базовая m)
+DO $$
+DECLARE vm integer; vmm integer; vcm integer; vkm integer;
+BEGIN
+  vm  := _dim_upsert('Метр', 'm', 'length', TRUE, 1);
+  PERFORM _dim_add_aliases(vm, ARRAY['м','метр','meter','m.']);
+
+  vmm := _dim_upsert('Миллиметр', 'mm', 'length', FALSE, 0.001);
+  PERFORM _dim_add_aliases(vmm, ARRAY['мм','миллиметр','mm.']);
+
+  vcm := _dim_upsert('Сантиметр', 'cm', 'length', FALSE, 0.01);
+  PERFORM _dim_add_aliases(vcm, ARRAY['см','сантиметр','cm.']);
+
+  vkm := _dim_upsert('Километр', 'km', 'length', FALSE, 1000);
+  PERFORM _dim_add_aliases(vkm, ARRAY['км','километр','km.']);
+END $$;
+
+-- AREA (базовая m2)
+DO $$
+DECLARE vm2 integer; vcm2 integer; vmm2 integer; vha integer; vkm2 integer;
+BEGIN
+  vm2  := _dim_upsert('Квадратный метр', 'm2', 'area', TRUE, 1);
+  PERFORM _dim_add_aliases(vm2, ARRAY['м2','м²','кв.м','sq m','m²']);
+
+  vcm2 := _dim_upsert('Квадратный сантиметр', 'cm2', 'area', FALSE, 0.0001);
+  PERFORM _dim_add_aliases(vcm2, ARRAY['см2','см²','кв.см','cm²']);
+
+  vmm2 := _dim_upsert('Квадратный миллиметр', 'mm2', 'area', FALSE, 0.000001);
+  PERFORM _dim_add_aliases(vmm2, ARRAY['мм2','мм²','кв.мм','mm²']);
+
+  vha  := _dim_upsert('Гектар', 'ha', 'area', FALSE, 10000);
+  PERFORM _dim_add_aliases(vha, ARRAY['га','hectare','ha.']);
+
+  vkm2 := _dim_upsert('Квадратный километр', 'km2', 'area', FALSE, 1000000);
+  PERFORM _dim_add_aliases(vkm2, ARRAY['км2','км²','km²']);
+END $$;
+
+-- VOLUME (базовая m3)
+DO $$
+DECLARE vm3 integer; vl integer; vml integer; vcm3 integer; vmm3 integer;
+BEGIN
+  vm3  := _dim_upsert('Кубический метр', 'm3', 'volume', TRUE, 1);
+  PERFORM _dim_add_aliases(vm3, ARRAY['м3','м³','куб.м','кубометр','m³']);
+
+  vl   := _dim_upsert('Литр', 'l', 'volume', FALSE, 0.001);
+  PERFORM _dim_add_aliases(vl, ARRAY['л','литр','liter','l.']);
+
+  vml  := _dim_upsert('Миллилитр', 'ml', 'volume', FALSE, 0.000001);
+  PERFORM _dim_add_aliases(vml, ARRAY['мл','milliliter','ml.']);
+
+  vcm3 := _dim_upsert('Кубический сантиметр', 'cm3', 'volume', FALSE, 0.000001);
+  PERFORM _dim_add_aliases(vcm3, ARRAY['см3','см³','куб.см','cm³']);
+
+  vmm3 := _dim_upsert('Кубический миллиметр', 'mm3', 'volume', FALSE, 0.000000001);
+  PERFORM _dim_add_aliases(vmm3, ARRAY['мм3','мм³','куб.мм','mm³']);
+END $$;
+
+-- TIME (базовая s)
+DO $$
+DECLARE vs integer; vmin integer; vh integer; vday integer;
+BEGIN
+  vs   := _dim_upsert('Секунда', 's', 'time', TRUE, 1);
+  PERFORM _dim_add_aliases(vs, ARRAY['с','сек','second','sec']);
+
+  vmin := _dim_upsert('Минута', 'min', 'time', FALSE, 60);
+  PERFORM _dim_add_aliases(vmin, ARRAY['мин','минута','minute']);
+
+  vh   := _dim_upsert('Час', 'h', 'time', FALSE, 3600);
+  PERFORM _dim_add_aliases(vh, ARRAY['ч','час','hour']);
+
+  vday := _dim_upsert('Сутки', 'day', 'time', FALSE, 86400);
+  PERFORM _dim_add_aliases(vday, ARRAY['д','сут','day']);
+END $$;
+
+-- 4) Индексы/ограничения (опционально, но полезно)
+
+-- уникальный индекс на код (NULL допускаются)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dim_code_idx ON dimansion ("code");
+
+-- уникальные алиасы в рамках единицы
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dimension_alias_dim_text
+  ON dimension_alias ("dimensionId", text);
+
+-- индекс по категории
+CREATE INDEX IF NOT EXISTS idx_dim_category ON dimansion ("category");

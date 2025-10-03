@@ -1,0 +1,38 @@
+1. Установить Alt Linux Server 10.4
+2. Настройка SSH
+2.1 Логинимся под пользователем, для того чтобы дать пользователю права root, необходимо:
+2.1.1 Залогиниться как root: su -
+2.1.2 Добавь своего пользователя в группу wheel: groups имя_пользователя
+2.1.3 Запусти редактор конфигурации sudoers: visudo
+2.1.4 Найди строку: ## Uncomment to allow members of group wheel to execute any command
+					# %wheel ALL=(ALL) ALL
+2.1.5 Убрыть # в начале, чтобы получилось: %wheel ALL=(ALL) ALL
+2.1.6 Перелогиниться в систему.
+2.2 Обновим систему: sudo apt-get update
+					 sudo apt-get dist-upgrade
+2.3 Установить пакет: apt-get install openssh-server
+2.4 Включить и запустить sshd: systemctl enable sshd
+							   systemctl start sshd
+2.5 Редактируем файл конфигурации ssh: nano /etc/openssh/sshd_config
+2.5.1 Основные параметры, которые стоит проверить/поменять: 
+				Port 22                # можно изменить на нестандартный порт (например 2222)
+				PermitRootLogin no     # запрещаем вход по root напрямую
+				PasswordAuthentication yes   # включить пароли (или no — если используем только ключи)
+				PubkeyAuthentication yes     # включаем авторизацию по ключам
+				AuthorizedKeysFile .ssh/authorized_keys
+2.6 Перезапускаем службу: systemctl restart sshd
+ГОТОВО
+3. Установить docker-engine, docker-compose
+4. Склонировать репозиторий git clone https://github.com/Yuriy1989/mtr.git
+5. cd mtr
+6. Создать и заполнить env файл в папке mtr-backend/.env (пример заполнения файла лежит mtr-backend/.env.example).
+7. Создать и заполнить env файл в папке корне проекта .env.db (пример заполнения файла лежит .env.db.example).
+8. Для работы проекта по протоколу HTTPS необходимы сертификат. В корне проекта создать папку certs сертификат и ключ необходимо положить в эту папку с именами:
+./certs/localhost.pem
+./certs/localhost-key.pem
+9. Собираем и стартуем:
+docker compose build
+docker compose up -d
+10. Приложение будет доступно: https://ваш_ip_сервера:8443
+11. Подключиться к БД (креды указаны в env.db) и выполнить 2 скрипта (script_1, script_2)
+12. Первый вход под пользователем admin, пароль 123456. Не забудьте изменить пароль.

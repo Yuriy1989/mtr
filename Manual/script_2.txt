@@ -1,0 +1,43 @@
+-- 1. Добавляем отдел
+INSERT INTO departments (
+    id,
+    "nameDepartment",
+    "numberDepartment"
+) VALUES (
+    1,
+    'АСУ',
+    '1'
+);
+
+-- 2. Добавляем пользователя admin
+INSERT INTO users (
+    id,
+    "firstName",
+    "lastName",
+    surname,
+    username,
+    password,
+    email,
+    position,
+    roles,
+    "createdAt",
+    "updatedAt",
+    "departmentId",
+    "storageId",
+    region_id
+) VALUES (
+    1,
+    'admin',
+    'admin',
+    'admin',
+    'admin',
+    '$2b$10$WArK0GumG7YK9T0m389ujOy6v7gR5/f454kChRnE/fo120S9vVKGe',
+    'admin@mail.ru',
+    'admin',
+    ARRAY['10','101','100','50','70','40','30','11','20'],
+    '2025-10-03 18:09:10.342845',
+    '2025-10-03 18:09:10.342845',
+    1,   -- departmentId
+    NULL,-- storageId
+    NULL -- region_id
+);
