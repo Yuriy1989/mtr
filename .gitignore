@@ -36,3 +36,4 @@ yarn-error.log*
 /mtr-backend/.env
 /postgres-data
 /certs
+.env.db
