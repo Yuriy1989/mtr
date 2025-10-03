@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   mtr-frontend:
     build:
@@ -13,7 +11,7 @@ services:
       # Монтируем сертификаты в nginx
       - ./certs:/etc/nginx/certs:ro
     ports:
-      - "127.0.0.1:8443:443"
+      - "8443:443"
     networks:
       - mtr-net
     restart: unless-stopped
