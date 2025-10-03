@@ -1,0 +1,91 @@
+.custom-table {
+  font-size: 12px; /* Уменьшение размера шрифта */
+  border: none; /* Убираем рамки */
+}
+
+.custom-table .ant-table-thead > tr > th {
+  font-size: 12px; /* Уменьшенный шрифт для заголовков */
+  font-weight: 500;
+  background-color: #f7f7f7;
+  color: #666;
+  padding: 8px;
+  border-bottom: 1px solid #e8e8e8; /* Легкая нижняя граница */
+}
+
+.custom-table .ant-table-tbody > tr > td {
+  font-size: 12px; /* Уменьшение шрифта в строках */
+  padding: 8px; /* Уменьшенные отступы */
+  color: #333;
+  border-bottom: 1px solid #f0f0f0; /* Легкие линии между строками */
+}
+
+.custom-table .ant-table-row:hover {
+  background-color: #f9f9f9; /* Цвет при наведении */
+}
+
+.custom-table .ant-pagination {
+  font-size: 10px; /* Уменьшенный размер шрифта для пагинации */
+  margin-top: 8px;
+}
+
+.custom-table .ant-table-body {
+  scrollbar-width: thin; /* Узкий скроллбар */
+  scrollbar-color: #eaeaea transparent;
+}
+
+.custom-table .ant-table-body::-webkit-scrollbar {
+  width: 6px; /* Узкий скроллбар для Chrome */
+}
+
+.custom-table .ant-table-body::-webkit-scrollbar-thumb {
+  background-color: #eaeaea;
+  border-radius: 3px;
+}
+
+/* Оформление для Excel */
+.excel-export {
+  font-family: Arial, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.excel-export th {
+  background-color: #4CAF50; /* Зелёный фон заголовков */
+  color: white; /* Белый текст */
+  text-align: center; /* Центрирование текста */
+  font-size: 14px;
+  padding: 10px;
+  border: 1px solid #ddd; /* Границы */
+}
+
+.excel-export td {
+  font-size: 12px;
+  padding: 8px;
+  border: 1px solid #ddd; /* Границы */
+  text-align: left; /* Текст выравнивается слева */
+}
+
+.excel-export tr:nth-child(even) {
+  background-color: #f2f2f2; /* Чередование строк с серым фоном */
+}
+
+.excel-export tr:hover {
+  background-color: #ddd; /* Подсветка строки при наведении */
+}
+
+.excel-export .total-row {
+  font-weight: bold; /* Жирный текст для итогов */
+  background-color: #f7f7f7;
+  color: #000;
+}
+
+.compact-form .ant-form-item { margin-bottom: 8px; }
+.compact-form .ant-form-item-label > label { font-weight: 500; }
+
+tr.row-status-0 td { background: #fff1f0; }     /* red-1 */
+tr.row-status-10 td { background: #e6f4ff; }    /* blue-1 */
+tr.row-status-20 td { background: #fffbe6; }    /* gold-1 */
+tr.row-status-30 td { background: #f6ffed; }    /* green-1 */
+tr.row-status-40 td { background: #f9f0ff; }    /* purple-1 */
+tr.row-status-50 td { background: #f0f5ff; }    /* geekblue-1 */
+tr.row-status-100 td { background: #e6fffb; }   /* cyan-1 */

@@ -1,0 +1,249 @@
+/* Тёмная шапка как на скрине */
+.app3-topbar {
+  height: 56px;
+  background: #0b2a4a;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.app3-save {
+  background: #ffffff !important;
+  border-color: #d9d9d9 !important;
+  color: #111 !important;
+}
+.app3-topbar .ant-btn {
+  border-radius: 8px;
+}
+
+/* Контейнер страницы */
+.app3-container {
+  padding: 12px 16px 24px;
+  background: #f5f7fa;
+  min-height: calc(100vh - 56px);
+}
+
+/* Карточка с таблицей */
+.app3-card {
+  box-shadow: 0 6px 18px rgba(0,0,0,.06);
+}
+
+/* Заголовок над таблицей */
+.app3-header {
+  padding: 4px 4px 12px;
+}
+
+/* Таблица — компактный стиль */
+.app3-table .ant-table {
+  background: #fff;
+}
+.app3-table .ant-table-thead > tr > th {
+  white-space: nowrap;
+}
+.app3-table .ant-table-tbody > tr > td {
+  vertical-align: middle;
+}
+
+/* Раскрытая форма в строке */
+.app3-expand {
+  background: #fbfcff;
+  border: 1px dashed #dbe7ff;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin: 8px 0;
+}
+.app3-inline-form .ant-form-item {
+  margin-bottom: 8px;
+}
+.app3-inline-form .app3-note {
+  min-width: 320px;
+  flex: 1;
+}
+
+/* Нижний футер по центру */
+.app3-footer {
+  text-align: center;
+  color: rgba(0,0,0,.45);
+  margin-top: 16px;
+}
+
+/* Красная метка "Срочно" */
+.urgent-tag {
+  background: #ff4d4f !important;
+  color: #fff !important;
+  border-color: #ff4d4f !important;
+}
+
+/* Центр заголовков таблицы */
+.app3-table .ant-table-thead > tr > th {
+  text-align: center;
+}
+
+/* Тулбар: поиск + сегменты + bulk */
+.app3-toolbar {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:8px;
+}
+.app3-search {
+  max-width: 420px;
+  flex: 1;
+}
+
+/* Блок массовых действий */
+.app3-bulk {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.app3-bulk-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 6px 8px;
+  background: #f7f9fc;
+  border: 1px solid #e6eef9;
+  border-radius: 8px;
+}
+.app3-bulk-transport {
+  background: #fffbe6;
+  border-color: #ffe58f;
+}
+
+/* Кнопки — выделены */
+.btn-max {
+  background: #52c41a !important;
+  border-color: #52c41a !important;
+  color: #a04444 !important;
+}
+.btn-bulk {
+  color: #000;
+  background: #1677ff10;
+  border-color: #1677ff40;
+
+}
+.btn-bulk:hover {
+  background: #1677ff20;
+}
+/* Тулбар */
+.app3-toolbar-left{
+flex: 1 1 auto;
+}
+
+/* Поиск больше НЕ тянется на всю ширину */
+.app3-search{
+  width: 360px;         /* при желании 320–420 */
+  flex: 0 0 auto;
+}
+
+/* Блок массовых действий справа */
+.app3-bulk{
+  margin-left:auto;
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.app3-toolbar-left .ant-segmented{
+  margin: 8px;
+}
+/* ——— Строки с проблемами ——— */
+.app3-row--over { background: #fff1f0; }          /* Отгружено > Объём */
+.app3-row--urgent { background: #fffbe6; }        /* Срочно */
+.app3-row--ok { }                                  /* на будущее */
+
+.app3-topbar { position: sticky; top: 0; z-index: 5; }
+.app3-save[disabled] { opacity: .7; }
+.app3-footer { color: rgba(0,0,0,.45); font-size: 12px; text-align: right; padding: 8px 0 0; }
+
+.app3-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: rgba(0,0,0,.65);
+  margin: 6px 0 2px;
+}
+.app3-stats .pill {
+  background: #f6f6f6;
+  border-radius: 12px;
+  padding: 2px 8px;
+}
+
+/* Ошибочный инпут количества — деликатно подсветим MAX-кнопку тоже */
+.btn-max.ant-btn[disabled] { opacity: .5; }
+/* === GLOBAL ACTION BUTTONS (унификация по всему приложению) === */
+.ant-btn { border-radius: 8px; height: 32px; padding: 0 12px; }
+
+/* Зелёная "Отправить" */
+.btn-send {
+  background: #2ca34f !important;
+  border-color: #2ca34f !important;
+  color: #fff !important;
+}
+.btn-send:hover,
+.btn-send:focus {
+  background: #238e43 !important;
+  border-color: #238e43 !important;
+}
+
+/* Синяя "Выход" */
+.btn-exit {
+  background: #1677ff !important;
+  border-color: #1677ff !important;
+  color: #fff !important;
+}
+.btn-exit:hover,
+.btn-exit:focus {
+  background: #1468db !important;
+  border-color: #1468db !important;
+}
+
+/* Белая "Сохранить" */
+.btn-save {
+  background: #ffffff !important;
+  border-color: #d9d9d9 !important;
+  color: #111 !important;
+}
+.btn-save:hover,
+.btn-save:focus {
+  border-color: #95a5a6 !important;
+}
+
+/* Поля формы — компактные и округлые */
+.ant-input,
+.ant-select-selector,
+.ant-picker { border-radius: 8px; }
+
+/* === MODAL CONFIRMS (унификация) === */
+/* Для стандартных confirm: "Да" слева (зел.), "Нет" справа (красн.), компактные */
+.ant-modal .ant-modal-content { padding: 16px; }
+.ant-modal-confirm .ant-modal-confirm-btns .ant-btn { height: 32px; }
+
+/* Порядок кнопок в confirm (2-кнопочные): делаем "Да" слева, "Нет" справа */
+.ant-modal-confirm .ant-modal-confirm-btns {
+  display: flex;
+  flex-direction: row-reverse; /* invert => Yes левее, No правее */
+}
+
+/* "Да" — зелёная (кроме dangerous) */
+.ant-modal-confirm .ant-modal-confirm-btns .ant-btn-primary:not(.ant-btn-dangerous) {
+  background: #2ca34f;
+  border-color: #2ca34f;
+}
+.ant-modal-confirm .ant-modal-confirm-btns .ant-btn-primary:not(.ant-btn-dangerous):hover {
+  background: #238e43;
+  border-color: #238e43;
+}
+
+/* Отключенные строки (общий утил) */
+.z-row--disabled { opacity: .6; cursor: not-allowed; }
