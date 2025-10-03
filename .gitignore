@@ -1,0 +1,36 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/mtr-backend/node_modules
+/mtr-frontend/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# production
+/mtr-backend/build
+/mtr-frontend/build
+/mtr-frontend/certs
+/mtr-backend/certs
+
+# misc
+.DS_Store
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE - VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+/mtr-backend/.env

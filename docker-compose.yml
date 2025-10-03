@@ -1,0 +1,57 @@
+name: mtr-stack
+
+services:
+  # БД включается только при профиле localdb
+  db:
+    profiles: ["localdb"]
+    image: postgres:15
+    container_name: mtr_postgres
+    environment:
+      POSTGRES_DB: mtr_project
+      POSTGRES_USER: ${DATABASE_USERNAME:-admin}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DATABASE_USERNAME:-admin} -d mtr_project",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      # контекст — родительская папка, содержащая и mtr, и mtr-backend
+      context: ..
+      # Dockerfile — лежит в репо фронта
+      dockerfile: mtr/docker/backend.Dockerfile
+    container_name: mtr_backend
+    env_file:
+      - ../mtr-backend/.env
+    volumes:
+      - ../mtr-backend/certs:/app/certs:ro
+    ports:
+      - "3001:3001"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        # Если фронт ожидает BASE_URL через ENV — подставь нужный
+        API_BASE_URL: "http://backend:3001"
+    container_name: mtr_frontend
+    volumes:
+      - ./src/utils/certs:/etc/nginx/certs:ro
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "8080:80"
+      - "8443:443"
+    depends_on:
+      - backend
+# хранилища данных на хосте — уже примонтированы через volumes выше
