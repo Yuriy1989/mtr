@@ -1,38 +1,283 @@
-1. Установить Alt Linux Server 10.4
-2. Настройка SSH
-2.1 Логинимся под пользователем, для того чтобы дать пользователю права root, необходимо:
-2.1.1 Залогиниться как root: su -
-2.1.2 Добавь своего пользователя в группу wheel: groups имя_пользователя. Запусти редактор конфигурации sudoers: visudo
-2.1.3 Найди строку: ## Uncomment to allow members of group wheel to execute any command
-					# %wheel ALL=(ALL) ALL
-Убрыть # в начале, чтобы получилось: %wheel ALL=(ALL) ALL
-2.1.4 Перелогиниться в систему.
-2.2 Обновим систему: sudo apt-get update
-					 sudo apt-get dist-upgrade
-2.3 Установить пакет: apt-get install openssh-server
-2.4 Включить и запустить sshd: systemctl enable sshd
-							   systemctl start sshd
-2.5 Редактируем файл конфигурации ssh: nano /etc/openssh/sshd_config
-2.5.1 Основные параметры, которые стоит проверить/поменять: 
-				Port 22                # можно изменить на нестандартный порт (например 2222)
-				PermitRootLogin no     # запрещаем вход по root напрямую
-				PasswordAuthentication yes   # включить пароли (или no — если используем только ключи)
-				PubkeyAuthentication yes     # включаем авторизацию по ключам
-				AuthorizedKeysFile .ssh/authorized_keys
-2.6 Перезапускаем службу: systemctl restart sshd
-ГОТОВО
-3. Установить docker-engine, docker-compose. Проверить запущен ли docker команда "sudo systemctl status docker", 
-если нет, добавить в автозапуск и запустить docker командой "sudo systemctl enable docker" и "sudo systemctl start docker".
-4. Склонировать репозиторий git clone https://github.com/Yuriy1989/mtr.git
-5. cd mtr
-6. Создать и заполнить env файл в папке mtr-backend/.env (пример заполнения файла лежит mtr-backend/.env.example).
-7. Создать и заполнить env файл в папке корне проекта .env.db (пример заполнения файла лежит .env.db.example).
-8. Для работы проекта по протоколу HTTPS необходимы сертификат. В корне проекта создать папку certs сертификат и ключ необходимо положить в эту папку с именами:
-./certs/localhost.pem
-./certs/localhost-key.pem
-9. Собираем и стартуем:
-9.1 docker compose build
-9.2 docker compose up -d
-10. Приложение будет доступно: https://ваш_ip_сервера:8443
-11. Подключиться к БД (креды указаны в env.db) и выполнить 2 скрипта (script_1, script_2)
-12. Первый вход под пользователем admin, пароль 123456. Не забудьте изменить пароль.
+Инструкция по развертыванию MTR в production
+
+1. Назначение
+
+Проект состоит из трех основных сервисов:
+- mtr-frontend: React-приложение, отдается через nginx по HTTPS.
+- mtr-backend: NestJS API, работает по HTTPS внутри docker-сети.
+- postgres: PostgreSQL 16, хранит данные приложения.
+
+Снаружи в production должен быть доступен только frontend:
+https://IP_СЕРВЕРА:8443
+
+Backend и PostgreSQL в docker-compose не публикуются наружу. Frontend обращается к backend через nginx location /api/.
+
+2. Подготовка сервера Alt Linux
+
+2.1. Настройка sudo
+
+Войти под root:
+su -
+
+Добавить пользователя в группу wheel:
+usermod -aG wheel ИМЯ_ПОЛЬЗОВАТЕЛЯ
+
+Открыть sudoers:
+visudo
+
+Найти строку:
+# %wheel ALL=(ALL) ALL
+
+Убрать #, чтобы получилось:
+%wheel ALL=(ALL) ALL
+
+После этого перелогиниться пользователем.
+
+2.2. Обновление системы
+
+sudo apt-get update
+sudo apt-get dist-upgrade
+
+2.3. SSH
+
+Установить SSH-сервер:
+sudo apt-get install openssh-server
+
+Включить и запустить:
+sudo systemctl enable sshd
+sudo systemctl start sshd
+
+Открыть конфиг:
+sudo nano /etc/openssh/sshd_config
+
+Рекомендуемые параметры:
+Port 22
+PermitRootLogin no
+PasswordAuthentication yes
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+
+Перезапустить SSH:
+sudo systemctl restart sshd
+
+3. Docker
+
+Установить docker-engine и docker-compose.
+
+Проверить статус:
+sudo systemctl status docker
+
+Если docker не запущен:
+sudo systemctl enable docker
+sudo systemctl start docker
+
+Проверить docker compose:
+docker compose version
+
+4. Получение проекта
+
+git clone https://github.com/Yuriy1989/mtr.git
+cd mtr
+
+5. Файлы окружения
+
+5.1. Backend env
+
+Создать файл:
+mtr-backend/.env
+
+Пример лежит:
+mtr-backend/.env.example
+
+Обязательные параметры:
+
+NODE_ENV=production
+PORT=3001
+
+HTTPS_CERTS_DIR=certs
+HTTPS_CERT_PATH=/app/certs/localhost.pem
+HTTPS_KEY_PATH=/app/certs/localhost-key.pem
+
+CORS_ORIGIN=https://IP_СЕРВЕРА:8443
+
+JWT_SECRET=СЛУЧАЙНАЯ_ДЛИННАЯ_СТРОКА
+JWT_REFRESH_SECRET=ДРУГАЯ_СЛУЧАЙНАЯ_ДЛИННАЯ_СТРОКА
+JWT_TTL=900s
+JWT_REFRESH_TTL=30d
+
+AD_ENABLED=false
+AD_URL=ldap://192.168.2.20:389
+AD_DOMAIN=mfc.dom
+AD_BASE_DN=DC=mfc,DC=dom
+AD_USER_DN_TEMPLATE=$${username}@$${domain}
+AD_TIMEOUT_MS=5000
+
+Важно: в env-файлах, которые читает docker compose, символ $ нужно писать как $$.
+Поэтому в файле указывается $${username}@$${domain}, а внутри контейнера backend получит ${username}@${domain}.
+
+JWT_SECRET и JWT_REFRESH_SECRET нельзя оставлять тестовыми. Сгенерировать можно так:
+openssl rand -hex 32
+
+Если сервер доступен по DNS-имени, лучше указать DNS-имя в CORS_ORIGIN, например:
+CORS_ORIGIN=https://mtr.company.local:8443
+
+5.2. Database env
+
+Создать файл в корне проекта:
+.env.db
+
+Пример лежит:
+.env.db.example
+
+Параметры:
+
+DATABASE_HOST=postgres
+DATABASE_PORT=5432
+DATABASE_USERNAME=admin
+DATABASE_PASSWORD=СЛОЖНЫЙ_ПАРОЛЬ_БД
+DATABASE_NAME=mtr_project
+
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=СЛОЖНЫЙ_ПАРОЛЬ_БД
+POSTGRES_DB=mtr_project
+
+DATABASE_PASSWORD и POSTGRES_PASSWORD должны совпадать.
+
+5.3. Frontend env
+
+Для docker production отдельный frontend env обычно не нужен: frontend по умолчанию использует /api.
+
+Если нужно изменить адрес API, создать:
+mtr-frontend/.env
+
+Пример:
+mtr-frontend/.env.example
+
+Для production через nginx:
+REACT_APP_API_URL=/api
+
+Для локальной разработки без nginx можно указать:
+REACT_APP_API_URL=https://localhost:3001
+
+6. Сертификаты HTTPS
+
+В корне проекта создать папку:
+certs
+
+Положить туда сертификат и ключ:
+certs/localhost.pem
+certs/localhost-key.pem
+
+Эти файлы используются:
+- nginx frontend-контейнером;
+- backend-контейнером.
+
+Для production желательно использовать сертификат, выпущенный для реального IP/DNS-имени сервера.
+
+Временный самоподписанный сертификат можно создать командой:
+
+mkdir -p certs
+openssl req -x509 -newkey rsa:4096 -keyout certs/localhost-key.pem -out certs/localhost.pem -days 365 -nodes -subj "/CN=localhost"
+
+7. Настройка Active Directory
+
+Настройки AD можно задать двумя способами:
+
+1. В mtr-backend/.env как стартовые значения.
+2. В интерфейсе приложения: Пользователи -> Настройки AD.
+
+Для вашего домена:
+AD_URL=ldap://192.168.2.20:389
+AD_DOMAIN=mfc.dom
+AD_BASE_DN=DC=mfc,DC=dom
+AD_USER_DN_TEMPLATE=$${username}@$${domain}
+
+Важно: если вы задаете этот шаблон через интерфейс приложения, пишите обычный вариант:
+${username}@${domain}
+
+В интерфейсе нужно указать учетную запись, которой разрешено читать пользователей домена, например:
+Администратор@mfc.dom
+
+Пароль этой учетной записи хранится в БД в зашифрованном виде.
+
+Важно: вход пользователя через домен проверяет пароль в AD, но роли и доступы приложения хранятся локально в PostgreSQL. Поэтому доменного пользователя нужно один раз добавить на вкладке Пользователи AD и назначить ему роли.
+
+8. Сборка и запуск
+
+Из корня проекта:
+
+docker compose build
+docker compose up -d
+
+Проверить контейнеры:
+docker compose ps
+
+Посмотреть логи backend:
+docker compose logs -f mtr-backend
+
+Посмотреть логи frontend:
+docker compose logs -f mtr-frontend
+
+Приложение будет доступно:
+https://IP_СЕРВЕРА:8443
+
+9. Инициализация базы
+
+После первого запуска выполнить SQL-скрипты из папки Manual:
+- script_1.txt
+- script_2.txt
+
+Так как PostgreSQL не публикуется наружу, выполнять удобнее внутри контейнера:
+
+docker compose exec -T postgres psql -U admin -d mtr_project < Manual/script_1.txt
+docker compose exec -T postgres psql -U admin -d mtr_project < Manual/script_2.txt
+
+Если в .env.db указаны другие POSTGRES_USER или POSTGRES_DB, заменить admin и mtr_project на свои значения.
+
+10. Первый вход
+
+Первый вход:
+логин: admin
+пароль: 123456
+
+После входа обязательно:
+- сменить пароль admin;
+- проверить роль Администратор;
+- открыть Пользователи -> Настройки AD;
+- включить AD и сохранить параметры подключения к домену;
+- открыть Пользователи AD, найти доменного пользователя и назначить ему роли.
+
+11. Обновление приложения
+
+Остановить сервисы:
+docker compose down
+
+Обновить код:
+git pull
+
+Пересобрать:
+docker compose build
+docker compose up -d
+
+Проверить логи:
+docker compose logs -f mtr-backend
+
+12. Резервное копирование PostgreSQL
+
+Создать backup:
+docker compose exec -T postgres pg_dump -U admin -d mtr_project > backup_mtr_project.sql
+
+Восстановить backup:
+docker compose exec -T postgres psql -U admin -d mtr_project < backup_mtr_project.sql
+
+13. Проверочный список перед production
+
+- В mtr-backend/.env заменены JWT_SECRET и JWT_REFRESH_SECRET.
+- В .env.db заменен пароль БД.
+- CORS_ORIGIN содержит реальный адрес frontend.
+- В certs лежат production-сертификаты.
+- Наружу открыт только порт 8443.
+- Backend и PostgreSQL не опубликованы наружу.
+- Первый пароль admin изменен.
+- AD-настройки сохранены в интерфейсе.
+- Доменным пользователям назначены локальные роли приложения.

@@ -34,6 +34,12 @@ export class User {
   @Column()
   password: string;
 
+  @Column({ default: 'local' })
+  authProvider: string;
+
+  @Column({ nullable: true })
+  adDn?: string;
+
   @Column()
   email: string;
 

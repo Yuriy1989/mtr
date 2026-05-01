@@ -34,6 +34,8 @@ yarn-debug.log*
 yarn-error.log*
 
 /mtr-backend/.env
+/mtr-backend/.env.db
 /postgres-data
 /certs
 .env.db
+.codex

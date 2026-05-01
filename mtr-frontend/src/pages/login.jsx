@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Form, Input, Button, Typography, App } from "antd";
+import { Form, Input, Button, Typography, App, Radio } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import { login, checkAuth } from "../services/store/slices/userSlice";
 import { useNavigate } from "react-router-dom";
@@ -62,9 +62,25 @@ const Login = () => {
           form={form}
           name="login"
           layout="vertical"
+          initialValues={{ authProvider: "ad" }}
           onFinish={onFinish}
           onFinishFailed={onFinishFailed}
         >
+          <Form.Item name="authProvider">
+            <Radio.Group
+              optionType="button"
+              buttonStyle="solid"
+              style={{ width: "100%", display: "flex" }}
+            >
+              <Radio.Button value="ad" style={{ flex: 1, textAlign: "center" }}>
+                AD DS
+              </Radio.Button>
+              <Radio.Button value="local" style={{ flex: 1, textAlign: "center" }}>
+                Локально
+              </Radio.Button>
+            </Radio.Group>
+          </Form.Item>
+
           <Form.Item
             label="Имя пользователя"
             name="username"

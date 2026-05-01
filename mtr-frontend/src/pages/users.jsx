@@ -8,6 +8,9 @@ import {
   Checkbox,
   message,
   Button,
+  Tabs,
+  Switch,
+  Space,
 } from "antd";
 import SubmitButton from "../components/button/Button";
 import { api } from "../utils/ApiDirectories";
@@ -18,6 +21,8 @@ import { v4 as uuidv4 } from "uuid";
 import { RULES } from "../constants/rules"; // поправьте путь при необходимости
 
 const { Option } = Select;
+const TOKEN_PREFIX = "$";
+const DEFAULT_AD_USER_DN_TEMPLATE = `${TOKEN_PREFIX}{username}@${TOKEN_PREFIX}{domain}`;
 
 const Users = () => {
   const [formInput] = Form.useForm();
@@ -25,9 +30,16 @@ const Users = () => {
   const [regions, setRegions] = useState([]); //регионы
   const [storages, setStorages] = useState([]); //склады
   const [users, setUsers] = useState([]); //пользователи
+  const [adUsers, setAdUsers] = useState([]);
+  const [adUsersLoading, setAdUsersLoading] = useState(false);
+  const [adSearch, setAdSearch] = useState("");
+  const [activeTab, setActiveTab] = useState("local");
+  const [adSettingsForm] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage(); //сообщения об успешности создания пользователя
   const [isEditingForm, setIsEditingForm] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);
+  const authProvider = Form.useWatch("authProvider", formInput) || "local";
+  const isAdUserForm = authProvider === "ad";
   const key = "updatable";
 
   //параметры самой таблицы, кол-во колонок, их названия и другое
@@ -90,6 +102,12 @@ const Users = () => {
       ),
     },
     {
+      title: "Тип",
+      dataIndex: "authProvider",
+      key: "authProvider",
+      render: (value) => (value === "ad" ? "AD DS" : "Локальный"),
+    },
+    {
       title: "Операции",
       dataIndex: "operation",
       render: (_, record) => {
@@ -116,10 +134,60 @@ const Users = () => {
     },
   ];
 
+  const adColumns = [
+    {
+      title: "Логин",
+      dataIndex: "username",
+      key: "username",
+    },
+    {
+      title: "ФИО",
+      dataIndex: "displayName",
+      key: "displayName",
+    },
+    {
+      title: "E-mail",
+      dataIndex: "email",
+      key: "email",
+    },
+    {
+      title: "Должность",
+      dataIndex: "position",
+      key: "position",
+    },
+    {
+      title: "UPN",
+      dataIndex: "userPrincipalName",
+      key: "userPrincipalName",
+    },
+    {
+      title: "Статус",
+      dataIndex: "registered",
+      key: "registered",
+      render: (registered) => (registered ? "Уже добавлен" : "Не добавлен"),
+    },
+    {
+      title: "Операции",
+      dataIndex: "operation",
+      render: (_, record) =>
+        record.registered ? (
+          <Typography.Text type="secondary">Уже добавлен</Typography.Text>
+        ) : (
+          <Typography.Link onClick={() => assignAdUser(record)}>
+            Назначить права
+          </Typography.Link>
+        ),
+    },
+  ];
+
   // запрос к бекенду для добавления нового user
   const onFinish = (values) => {
-    apiUsers
-      .createUser(values)
+    const request =
+      values.authProvider === "ad"
+        ? apiUsers.importAdUser(values)
+        : apiUsers.createUser(values);
+
+    request
       .then((res) => {
         console.log("Ответ от сервера:", res);
         if (res && res.success === true) {
@@ -128,17 +196,19 @@ const Users = () => {
           messageApi.open({
             key,
             type: "success",
-            content: "Пользователь успешно создан!",
+            content: "Пользователь успешно сохранен!",
             duration: 2,
           });
 
           // Очистить форму после успешного создания
           formInput.resetFields();
+          setIsEditingForm(false);
+          setEditingUserId(null);
         } else {
           messageApi.open({
             key,
             type: "error",
-            content: "Ошибка создания пользователя",
+          content: "Ошибка создания пользователя",
             duration: 2,
           });
           console.error("Ответ от сервера не содержит success:", res);
@@ -155,10 +225,59 @@ const Users = () => {
       });
   };
 
+  const assignAdUser = (record) => {
+    const existingUser = users.find(
+      (user) => user.username?.toLowerCase() === record.username?.toLowerCase()
+    );
+    if (existingUser) {
+      messageApi.open({
+        key,
+        type: "warning",
+        content: "Этот пользователь уже зарегистрирован в системе.",
+        duration: 3,
+      });
+      return;
+    }
+
+    formInput.setFieldsValue({
+      ...record,
+      authProvider: "ad",
+      department: existingUser?.department
+        ? departments.find((d) => d.nameDepartment === existingUser.department)?.id?.toString()
+        : undefined,
+      storage: existingUser?.storage
+        ? storages.find((s) => s.nameStorage === existingUser.storage)?.id?.toString()
+        : undefined,
+      region: existingUser?.region
+        ? regions.find((r) => r.nameRegion === existingUser.region)?.id?.toString()
+        : undefined,
+      roles: existingUser?.roles
+        ? existingUser.roles
+            .map((roleLabel) => {
+              const found = Object.entries(RULES).find(([, label]) => label === roleLabel);
+              return found ? String(found[0]) : null;
+            })
+            .filter(Boolean)
+        : ["10"],
+      password: undefined,
+      adDn: record.distinguishedName,
+    });
+    setIsEditingForm(false);
+    setEditingUserId(null);
+    setActiveTab("local");
+    messageApi.open({
+      key,
+      type: "info",
+      content: "Пользователь AD перенесен в форму. Выберите отдел и роли.",
+      duration: 3,
+    });
+  };
+
   // передаем значение из таблицы в input для редактирования и сохраняем key выбранной строки
   const edit = (record) => {
     formInput.setFieldsValue({
       ...record,
+      authProvider: record.authProvider || "local",
       department: departments
         .find((d) => d.nameDepartment === record.department)
         ?.id?.toString(),
@@ -195,11 +314,17 @@ const Users = () => {
           region: values.region,
           storage: values.storage,
           username: values.username,
-          password: values.password,
+          password: values.authProvider === "ad" ? undefined : values.password,
           roles: values.roles,
+          authProvider: values.authProvider,
+          adDn: values.adDn,
         };
         // Добавляем пароль только если он не пустой
-        if (values.password && values.password.trim() !== "") {
+        if (
+          values.authProvider !== "ad" &&
+          values.password &&
+          values.password.trim() !== ""
+        ) {
           updatedUser.password = values.password;
         }
 
@@ -262,6 +387,8 @@ const Users = () => {
             key: `${uuidv4()}`,
             number: n + 1,
             username: item.username,
+            authProvider: item.authProvider,
+            adDn: item.adDn,
             surname: item.surname,
             firstName: item.firstName,
             lastName: item.lastName,
@@ -278,18 +405,78 @@ const Users = () => {
       .catch((err) => console.log(err));
   };
 
+  const getAdSettings = () => {
+    apiUsers
+      .getAdSettings()
+      .then((res) => {
+        adSettingsForm.setFieldsValue({
+          enabled: res.enabled,
+          url: res.url,
+          domain: res.domain,
+          baseDn: res.baseDn,
+          bindUsername: res.bindUsername,
+          bindPassword: undefined,
+          userDnTemplate: res.userDnTemplate,
+          timeout: res.timeout,
+        });
+      })
+      .catch((err) => message.error(err?.message || "Не удалось получить настройки AD"));
+  };
+
+  const saveAdSettings = async (values) => {
+    try {
+      await apiUsers.updateAdSettings(values);
+      message.success("Настройки AD сохранены");
+      getAdSettings();
+    } catch (err) {
+      message.error(err?.message || "Не удалось сохранить настройки AD");
+    }
+  };
+
+  const getAdUsers = async (search = adSearch) => {
+    setAdUsersLoading(true);
+    try {
+      const res = await apiUsers.getAdUsers(search);
+      setAdUsers(
+        res.map((item) => ({
+          ...item,
+          key: item.distinguishedName || item.username,
+          registered: users.some(
+            (user) =>
+              user.username?.toLowerCase() === item.username?.toLowerCase()
+          ),
+        }))
+      );
+    } catch (err) {
+      message.error(err?.message || "Не удалось получить пользователей AD");
+    } finally {
+      setAdUsersLoading(false);
+    }
+  };
+
   useEffect(() => {
     getDepartmentsAll();
     getRegionsAll();
     getStoragesAll();
     getUsers();
+    getAdSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <>
       {contextHolder}
-      <Divider orientation="left">Пользователи</Divider>
-      <Form
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: "local",
+            label: "Пользователи",
+            children: (
+              <>
+                <Divider orientation="left">Пользователи</Divider>
+                <Form
         form={formInput}
         name="createUser"
         labelCol={{
@@ -412,17 +599,27 @@ const Users = () => {
             <Input placeholder="Логин" />
           </Form.Item>
 
-          <Form.Item
-            label="Пароль"
-            name="password"
-            rules={
-              isEditingForm
-                ? [] // без required при редактировании
-                : [{ required: true, message: "Введите пароль" }]
-            }
-          >
-            <Input.Password placeholder="Password" />
+          <Form.Item name="authProvider" initialValue="local" hidden>
+            <Input />
           </Form.Item>
+
+          <Form.Item name="adDn" hidden>
+            <Input />
+          </Form.Item>
+
+          {!isAdUserForm && (
+            <Form.Item
+              label="Пароль"
+              name="password"
+              rules={
+                isEditingForm
+                  ? [] // без required при редактировании
+                  : [{ required: true, message: "Введите пароль" }]
+              }
+            >
+              <Input.Password placeholder="Password" />
+            </Form.Item>
+          )}
           <Form.Item
             wrapperCol={{
               offset: 6,
@@ -480,6 +677,91 @@ const Users = () => {
         </div>
       </Form>
       <TableDirectories dataSource={users} columns={columns} />
+              </>
+            ),
+          },
+          {
+            key: "ad-users",
+            label: "Пользователи AD",
+            children: (
+              <>
+                <Divider orientation="left">Пользователи домена</Divider>
+                <Space style={{ marginBottom: 16 }} wrap>
+                  <Input.Search
+                    allowClear
+                    placeholder="Логин, ФИО, e-mail"
+                    enterButton="Найти"
+                    loading={adUsersLoading}
+                    value={adSearch}
+                    onChange={(event) => setAdSearch(event.target.value)}
+                    onSearch={(value) => getAdUsers(value)}
+                    style={{ width: 360 }}
+                  />
+                  <Button onClick={() => getAdUsers("")} loading={adUsersLoading}>
+                    Показать всех
+                  </Button>
+                </Space>
+                <TableDirectories dataSource={adUsers} columns={adColumns} />
+              </>
+            ),
+          },
+          {
+            key: "ad-settings",
+            label: "Настройки AD",
+            children: (
+              <>
+                <Divider orientation="left">Подключение к домену</Divider>
+                <Form
+                  form={adSettingsForm}
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 12 }}
+                  style={{ maxWidth: 900 }}
+                  onFinish={saveAdSettings}
+                  initialValues={{
+                    enabled: false,
+                    url: "ldap://192.168.2.20:389",
+                    domain: "mfc.dom",
+                    baseDn: "DC=mfc,DC=dom",
+                    bindUsername: "Администратор@mfc.dom",
+                    userDnTemplate: DEFAULT_AD_USER_DN_TEMPLATE,
+                    timeout: 5000,
+                  }}
+                >
+                  <Form.Item name="enabled" label="AD включен" valuePropName="checked">
+                    <Switch />
+                  </Form.Item>
+                  <Form.Item name="url" label="LDAP адрес" rules={[{ required: true }]}>
+                    <Input placeholder="ldap://192.168.2.20:389" />
+                  </Form.Item>
+                  <Form.Item name="domain" label="Домен" rules={[{ required: true }]}>
+                    <Input placeholder="mfc.dom" />
+                  </Form.Item>
+                  <Form.Item name="baseDn" label="Base DN" rules={[{ required: true }]}>
+                    <Input placeholder="DC=mfc,DC=dom" />
+                  </Form.Item>
+                  <Form.Item name="bindUsername" label="Администратор AD" rules={[{ required: true }]}>
+                    <Input placeholder="Администратор@mfc.dom" />
+                  </Form.Item>
+                  <Form.Item name="bindPassword" label="Пароль AD">
+                    <Input.Password placeholder="Оставьте пустым, чтобы не менять" />
+                  </Form.Item>
+                  <Form.Item name="userDnTemplate" label="Шаблон входа" rules={[{ required: true }]}>
+                    <Input placeholder={DEFAULT_AD_USER_DN_TEMPLATE} />
+                  </Form.Item>
+                  <Form.Item name="timeout" label="Таймаут, мс" rules={[{ required: true }]}>
+                    <Input type="number" min={1000} max={60000} />
+                  </Form.Item>
+                  <Form.Item wrapperCol={{ offset: 6, span: 12 }}>
+                    <Button type="primary" htmlType="submit">
+                      Сохранить настройки
+                    </Button>
+                  </Form.Item>
+                </Form>
+              </>
+            ),
+          },
+        ]}
+      />
     </>
   );
 };

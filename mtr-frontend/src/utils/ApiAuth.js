@@ -56,8 +56,9 @@ class Api {
   }
 
   // POST /signin -> { access_token, user } ; refreshToken приходит httpOnly-кукой
-  async login({ username, password }) {
-    const data = await this._request(`/signin`, {
+  async login({ username, password, authProvider = "local" }) {
+    const path = authProvider === "ad" ? "/signin/ad" : "/signin";
+    const data = await this._request(path, {
       method: "POST",
       body: JSON.stringify({ username, password }),
     });

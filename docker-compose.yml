@@ -29,8 +29,8 @@ services:
       - ./certs:/app/certs:ro
     depends_on:
       - postgres
-    ports:
-      - "3001:3001"
+    expose:
+      - "3001"
     networks:
       - mtr-net
     restart: unless-stopped
@@ -40,8 +40,8 @@ services:
     container_name: mtr-postgres
     env_file:
       - ./.env.db
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
     networks:

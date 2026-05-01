@@ -9,6 +9,9 @@ import { AuthController } from './auth.controller';
 import { JwtConfigFactory } from '../config/jwt-config.factory';
 import { JwtRefreshStrategy } from './strategy/jwt-refresh.strategy';
 import { JwtRefreshGuard } from './guard/jwtRefresh.guard';
+import { AdAuthService } from './ad-auth.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AdSettings } from './entities/ad-settings.entity';
 
 @Module({
   imports: [
@@ -17,6 +20,7 @@ import { JwtRefreshGuard } from './guard/jwtRefresh.guard';
     JwtModule.registerAsync({
       useClass: JwtConfigFactory,
     }),
+    TypeOrmModule.forFeature([AdSettings]),
   ],
   controllers: [AuthController],
   providers: [
@@ -26,6 +30,7 @@ import { JwtRefreshGuard } from './guard/jwtRefresh.guard';
     JwtRefreshGuard,
     JwtConfigFactory,
     JwtRefreshStrategy,
+    AdAuthService,
   ],
   exports: [AuthService],
 })

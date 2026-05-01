@@ -8,11 +8,14 @@ import { json, urlencoded } from 'express';
 import * as compression from 'compression';
 
 async function bootstrap() {
+  const certsDir = process.env.HTTPS_CERTS_DIR || 'certs';
   const key = fs.readFileSync(
-    path.join(process.cwd(), 'certs', 'localhost-key.pem'),
+    process.env.HTTPS_KEY_PATH ||
+      path.join(process.cwd(), certsDir, 'localhost-key.pem'),
   );
   const cert = fs.readFileSync(
-    path.join(process.cwd(), 'certs', 'localhost.pem'),
+    process.env.HTTPS_CERT_PATH ||
+      path.join(process.cwd(), certsDir, 'localhost.pem'),
   );
   const PORT = process.env.PORT || 3001;
   const app = await NestFactory.create(AppModule, {
@@ -22,8 +25,9 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
+  const corsOrigin = process.env.CORS_ORIGIN;
   app.enableCors({
-    origin: true, // ← указать фронтенд прода
+    origin: corsOrigin ? corsOrigin.split(',').map((item) => item.trim()) : true,
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

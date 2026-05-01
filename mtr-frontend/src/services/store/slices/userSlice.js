@@ -15,9 +15,9 @@ const initialState = {
 
 export const login = createAsyncThunk(
   "user/login",
-  async ({ username, password }, { rejectWithValue }) => {
+  async ({ username, password, authProvider }, { rejectWithValue }) => {
     try {
-      const res = await api.login({ username, password });
+      const res = await api.login({ username, password, authProvider });
       const { access_token, user } = res;
 
       if (!user) return rejectWithValue("Неверный логин или пароль");

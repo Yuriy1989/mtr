@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, Raw, Repository } from 'typeorm';
 import { createHash } from 'src/helpers/hash';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class UsersService {
@@ -13,7 +14,12 @@ export class UsersService {
   ) {}
 
   async create(createUserDto: CreateUserDto) {
-    const { password } = createUserDto;
+    const existingUser = await this.findByUsername(createUserDto.username);
+    if (existingUser) {
+      throw new ConflictException('Пользователь с таким логином уже существует');
+    }
+
+    const password = createUserDto.password || randomBytes(32).toString('hex');
     const passwordHash = await createHash(password);
     const user = this.userRepository.create({
       ...createUserDto,
@@ -44,8 +50,35 @@ export class UsersService {
   }
 
   async findByUsername(username: string): Promise<User> {
-    const user = await this.userRepository.findOneBy({ username });
+    const user = await this.userRepository.findOne({
+      where: {
+        username: Raw((alias) => `LOWER(${alias}) = LOWER(:username)`, {
+          username,
+        }),
+      },
+    });
     return user;
+  }
+
+  async upsertAdUser(data: any) {
+    const user = await this.findByUsername(data.username);
+    if (user) {
+      throw new ConflictException('Пользователь с таким логином уже существует');
+    }
+
+    const payload = {
+      ...data,
+      authProvider: 'ad',
+      password: undefined,
+    };
+
+    const passwordHash = await createHash(randomBytes(32).toString('hex'));
+    return this.userRepository.save(
+      this.userRepository.create({
+        ...payload,
+        password: passwordHash,
+      }),
+    );
   }
 
   async update(id: number, updateUserDto: any) {

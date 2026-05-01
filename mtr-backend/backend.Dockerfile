@@ -12,8 +12,9 @@ RUN npm ci
 # Копируем исходники и pm2 конфиг
 COPY mtr-backend/ ./
 
-# Билдим backend (если требуется)
-RUN npm run build || true
+# Билдим backend
+RUN npm run build
+ENV NODE_ENV=production
 
 # Папка для сертификатов (будем монтировать)
 RUN mkdir -p /app/certs

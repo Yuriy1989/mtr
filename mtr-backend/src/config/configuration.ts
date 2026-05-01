@@ -15,4 +15,12 @@ export default () => ({
     ttl: process.env.JWT_TTL || '900s', // 15 мин (пример)
     refreshTtl: process.env.JWT_REFRESH_TTL || '30d', // 30 дней
   },
+  activeDirectory: {
+    enabled: process.env.AD_ENABLED === 'true',
+    url: process.env.AD_URL,
+    domain: process.env.AD_DOMAIN,
+    baseDn: process.env.AD_BASE_DN,
+    userDnTemplate: process.env.AD_USER_DN_TEMPLATE,
+    timeout: parseInt(process.env.AD_TIMEOUT_MS, 10) || 5000,
+  },
 });

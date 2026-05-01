@@ -1,3 +1,2 @@
-export const SERVERNAME = '/api'; // dev
-// export const SERVERNAME = 'http://localhost:4000'; //prod
+export const SERVERNAME = process.env.REACT_APP_API_URL || '/api';
 export const HEADERTHISCONTENTTYPE = { 'Content-Type': 'application/json' };
