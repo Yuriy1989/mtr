@@ -34,7 +34,7 @@
     "react-dom": "^18.2.0",
     "react-highlight-words": "^0.21.0",
     "react-redux": "^9.1.0",
-    "react-router-dom": "^6.21.0",
+    "react-router-dom": "^6.30.3",
     "react-scripts": "5.0.1",
     "recharts": "^3.2.1",
     "redux": "^5.0.1",
